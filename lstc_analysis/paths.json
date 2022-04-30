@@ -1,0 +1,5 @@
+{
+  "datapath": "../spiketrains",
+  "resultspath": "../results",
+  "figurepath": "../figures"
+}

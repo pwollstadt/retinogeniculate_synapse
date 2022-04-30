@@ -1,0 +1,4 @@
+The present repository contains scripts with different Licenses. All scripts in
+lstc_analysis are under GPL-3.0 (making use of the GPL-3.0-versioned IDTxl
+toolbox), while all scripts in local_bias_correction and its subfolders are
+under GPL-2.0 (making use of the GPL-2.0-versioned pyentropy toolbox).
