@@ -813,7 +813,7 @@ def plot_lstc_corr_example():
         # cb.set_label('counts [log]')
         c = np.corrcoef(lais, lte)[0, 1]
         contrib = contribution[pair-1]
-        ax[p, 0].text(0.05, 0.56, f'Pair {pair}\ncontr.={contrib:.2f} %\nc={c:.4f}', transform=ax[p, 0].transAxes)
+        ax[p, 0].text(0.05, 0.56, f'Pair {pair}\n$contr={contrib:.2f}$ %\n$c={c:.4f}$', transform=ax[p, 0].transAxes)
 
         # Relayed spikes
         hist, xedges, yedges, h = ax[p, 1].hist2d(
