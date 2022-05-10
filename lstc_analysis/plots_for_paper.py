@@ -543,15 +543,15 @@ def plot_isi():
            color=col_dark_gray, linewidth=0.5)
     ax.set(xlabel='$ISI_{rel}$ [ms]', ylabel='abs. frequency')
 
-    def _plot_line_area(ax, measures, col_dark, col_light, label,
+    def _plot_line_area(ax, measures, col_dark, col_light, label, legend,
                         linestyle=None):
         if linestyle is None:
             linestyle = ['-']
         for i, measure in enumerate(measures):
             print('positive {0}: {1}'.format(
-                label, isi_ind[np.mean(measure, axis=0) > 0]))
+                legend[i], isi_ind[np.mean(measure, axis=0) > 0]))
             ax.plot(isi_ind, np.mean(measure, axis=0), linestyle[i],
-                    label=f'mean {label}', color=col_dark, linewidth=2.0)
+                    label=legend[i], color=col_dark, linewidth=2.0)
             ax.fill_between(isi_ind,
                             np.mean(measure, axis=0) + np.std(measure, axis=0),
                             np.mean(measure, axis=0) - np.std(measure, axis=0),
@@ -564,6 +564,7 @@ def plot_isi():
                      color=col_light_gray)
             plt.text(measure_max * 1.2, y_max * (1-(i+1)*0.25),
                      'max. @ ISI = {0:d}'.format(measure_max), fontsize=10)
+            print(f'max. {legend[i]}: {measure_max}')
 
         ax.set(xlabel='$ISI$ [ms]', ylabel=f'{label} [bits]',
                xlim=[-0.5, max_isi], ylim=[y_min, y_max])
@@ -572,17 +573,19 @@ def plot_isi():
 
     # LAIS and LTE by ISI, total
     ax = plt.subplot(323)
-    _plot_line_area(ax, [lais_by_isi], col_lais_dark, col_lais_light, '$lAIS$')
+    _plot_line_area(ax, [lais_by_isi], col_lais_dark, col_lais_light, '$lAIS$', ['mean $lAIS$'])
     ax = plt.subplot(324)
-    _plot_line_area(ax, [lte_by_isi], col_lte_dark, col_lte_light, '$lTE$')
+    _plot_line_area(ax, [lte_by_isi], col_lte_dark, col_lte_light, '$lTE$', ['mean $lTE$'])
 
     # LAIS and LTE by ISI, relayed vs. non-relayed
     ax = plt.subplot(325)
     _plot_line_area(ax, [lais_by_isi_relayed, lais_by_isi_nonrelayed],
-                    col_lais_dark, col_lais_light, '$lAIS$ relayed', [':', '--'])
+                    col_lais_dark, col_lais_light, '$lAIS$',
+                    ['mean $lAIS$ relayed', 'mean $lAIS$ nonrelayed'], ['--', ':'])
     ax = plt.subplot(326)
-    _plot_line_area(ax, [lte_by_isi_nonrelayed, lte_by_isi_relayed],
-                    col_lte_dark, col_lte_light, '$lTE$ nonrelayed', [':', '--'])
+    _plot_line_area(ax, [lte_by_isi_relayed, lte_by_isi_nonrelayed],
+                    col_lte_dark, col_lte_light, '$lTE$',
+                    ['mean $lTE$ relayed', 'mean $lTE$ nonrelayed'], ['--', ':'])
 
     # Label subplots for paper
     enumerate_subplots(fig, -0.22, 1.05, text_size=subplot_label_size)
