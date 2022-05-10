@@ -178,6 +178,7 @@ def lstc_correlation():
     print('\nCalculate LSTC and correlation between LSTC and contribution')
     # Load correlation results
     contribution = np.genfromtxt(datapath.joinpath('contr.csv'), delimiter=',')
+    contribution = contribution[np.array(all_pairs)-1]
     c_all = np.zeros(len(all_pairs))
     r_all = np.zeros(len(all_pairs))
     c_pval_all = np.zeros(len(all_pairs))
@@ -188,14 +189,18 @@ def lstc_correlation():
         # Collect individual results and apply Bonferroni-correction.
         c_all[i] = corr['corrcoef']
         r_all[i] = corr['spearmanr']
-        c_pval_all[i] = corr['p_value_c'] / len(all_pairs)
-        r_pval_all[i] = corr['p_value_r'] / len(all_pairs)
-
-    c = np.corrcoef(contribution[np.array(all_pairs)-1], c_all)
-    r = sc.spearmanr(contribution[np.array(all_pairs)-1], c_all)
+        c_pval_all[i] = corr['p_value_c']
+        r_pval_all[i] = corr['p_value_r']
+    alpha = 0.01
+    significant = c_pval_all < alpha/len(all_pairs)
+    print(f'Pairs with sign. LSTC (Bonferroni-corrected, a={alpha}):')
+    print(f'{np.array(all_pairs)[significant]}\n{c_pval_all[significant]}')
+    c = np.corrcoef(contribution[significant], c_all[significant])
+    r = sc.spearmanr(contribution[significant], c_all[significant])
     corr_contr = {'pearson_p': c[0, 1],
                   'spearman_r': r[0],
                   'n_permutations': 1000,
+                  'pair_id': all_pairs,
                   'c_all': c_all,
                   'c_pval_all': c_pval_all,
                   'r_all': r_all,
@@ -205,14 +210,14 @@ def lstc_correlation():
 
     # Calculate correlation with contribution over pairs. Make a copy to use
     # numpy's in-place shuffling.
-    contribution_surrogate = cp.copy(contribution[np.array(all_pairs)-1])
+    contribution_surrogate = cp.copy(contribution[significant])
     perm_dist_c = np.zeros(corr['n_permutations'])
     perm_dist_r = np.zeros(corr['n_permutations'])
     for p in range(corr['n_permutations']):
         # Shuffle LAIS in place
         np.random.shuffle(contribution_surrogate)
-        c = np.corrcoef(contribution_surrogate, c_all)
-        r = sc.spearmanr(contribution_surrogate, c_all)
+        c = np.corrcoef(contribution_surrogate, c_all[significant])
+        r = sc.spearmanr(contribution_surrogate, c_all[significant])
         perm_dist_c[p] = c[0, 1]
         perm_dist_r[p] = r[0]
         # Print a busy symbol to the console
@@ -241,7 +246,7 @@ def lstc_correlation():
     plt.subplots_adjust(left=0.2, right=0.9, bottom=0.17, top=0.95, wspace=0.4, hspace=0.4)
     bar_linewidth = axes_linewidth
     contribution = np.array(contribution)
-    plt.scatter(contribution[np.array(all_pairs)-1], c_all, s=40,
+    plt.scatter(contribution[significant], c_all[significant], s=40,
                 linewidth=bar_linewidth, color=col_light_gray, edgecolor='k',
                 alpha=0.8)
     plt.xlabel('contribution [%]')
@@ -264,13 +269,12 @@ def lstc_correlation():
     xy_labels['9'] = (-6, 1, True)
     xy_labels['10'] = (-5, -8, False)
     xy_labels['12'] = (-8, 1, True)
-    xy_labels['15'] = (-6, -8, False)
     # Labels with arrows
     xy_labels['13'] = (14, -15, True)
     xy_labels['2'] = (15, -12, True)
 
-    labels = ['{0}'.format(i) for i in all_pairs]
-    for label, x, y in zip(labels, contribution[np.array(all_pairs)-1], c_all):
+    labels = ['{0}'.format(i) for i in np.array(all_pairs)[significant]]
+    for label, x, y in zip(labels, contribution[significant], c_all[significant]):
 
         if xy_labels[label][2]:
             plt.annotate(
@@ -286,7 +290,7 @@ def lstc_correlation():
                 textcoords='offset points', ha='right', va='bottom', fontsize=8)
 
     plt.xlim([-10, 80])
-    plt.ylim([-0.05, 0.30])
+    plt.ylim([-0.01, 0.30])
     plt.savefig(figurepath.joinpath(f'all_pairs_contr_scatter.{fig_ext}'),
                 dpi=400)
     plt.close()
@@ -809,7 +813,7 @@ def plot_lstc_corr_example():
         # cb.set_label('counts [log]')
         c = np.corrcoef(lais, lte)[0, 1]
         contrib = contribution[pair-1]
-        ax[p, 0].text(0.05, 0.56, f'Pair {pair}\nc={contrib:.2f} %\nr={c:.4f}', transform=ax[p, 0].transAxes)
+        ax[p, 0].text(0.05, 0.56, f'Pair {pair}\ncontr.={contrib:.2f} %\nc={c:.4f}', transform=ax[p, 0].transAxes)
 
         # Relayed spikes
         hist, xedges, yedges, h = ax[p, 1].hist2d(
