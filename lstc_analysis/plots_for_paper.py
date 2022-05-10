@@ -195,7 +195,13 @@ def lstc_correlation():
     r = sc.spearmanr(contribution[np.array(all_pairs)-1], c_all)
     corr_contr = {'pearson_p': c[0, 1],
                   'spearman_r': r[0],
-                  'n_permutations': 1000}
+                  'n_permutations': 1000,
+                  'c_all': c_all,
+                  'c_pval_all': c_pval_all,
+                  'r_all': r_all,
+                  'r_pval_all': r_pval_all,
+                  'contribution': contribution
+                  }
 
     # Calculate correlation with contribution over pairs. Make a copy to use
     # numpy's in-place shuffling.
