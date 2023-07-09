@@ -431,7 +431,7 @@ def plot_sta():
                color=col_light, linewidth=0.5)
         a.plot(np.arange(-max_lag, max_lag + 1), np.mean(all, axis=0),
                color=col_dark, linewidth=2)
-        a.set(ylabel=f'{label} [bits]')
+        a.set(ylabel=f'{label}')
 
         # relayed
         a = ax[plot_inds[1]]
@@ -462,6 +462,7 @@ def plot_sta():
                                nonrelayed[:, max_lag], color=col_light)
             a.set(xticks=(np.arange(1, N + 1, 2) + width / 2),
                   xlim=[0, N + 1 + width],
+                  ylabel=f'{label}',
                   xticklabels=np.array(all_pairs)[np.arange(1, N + 1, 2)])
             a.legend([bar_rel, bar_nonrel], ['rel.', 'non-rel.'])
         else:
@@ -470,19 +471,22 @@ def plot_sta():
 
     # LAIS
     _plot_sta(sta_lais_relayed, sta_lais_all, sta_lais_nonrelayed,
-              col_lais_light, col_lais_dark, [0, 1, 2, 3], 'LAIS', True)
+              col_light_gray, col_dark_gray, [0, 1, 2, 3], '$lAIS$ [bits]', True)
     # LTE
     _plot_sta(sta_lte_relayed, sta_lte_all, sta_lte_nonrelayed,
-              col_lte_light, col_lte_dark, [4, 5, 6, 7], 'LTE', True)
+              col_light_gray, col_dark_gray, [4, 5, 6, 7], '$lTE$ [bits]', True)
     # RGC
     _plot_sta(sta_rgc_relayed, sta_rgc_all, sta_rgc_nonrelayed,
-              col_rgc_light, col_rgc_dark, [8, 9, 10], 'RGC')
+              col_light_gray, col_dark_gray, [8, 9, 10], 'RGC spikes')
     # LGN
     _plot_sta(sta_lgn_relayed, sta_lgn_all, sta_lgn_nonrelayed,
-              col_lgn_light, col_lgn_dark, [12, 13, 14], 'LGN')
+              col_light_gray, col_dark_gray, [12, 13, 14], 'LGN spikes')
 
     # Label subplots.
     enumerate_subplots(fig, 0.05, 0.85, text_size=subplot_label_size)
+    for a, t in zip(ax[:3], ['all spikes', 'relayed', 'non-relayed']):
+        a.set(title=t)
+    plt.tight_layout()
     plt.savefig(figurepath.joinpath(f'all_pairs_sta.{fig_ext}'), dpi=600)
     plt.close()
 
@@ -526,9 +530,6 @@ def plot_isi():
             'lais_by_isi_nonrelayed'][isi_unique_nonrelayed]
         lte_by_isi_nonrelayed[i, isi_unique_nonrelayed] = isi[
             'lte_by_isi_nonrelayed'][isi_unique_nonrelayed]
-
-    plt.rc('axes', titlesize=12, labelsize=10, titleweight='bold',
-           linewidth=axes_linewidth)
 
     fig = plt.figure(figsize=(fig_params['fig_width'], 6.0))
     isi_ind = np.arange(max_isi)
@@ -816,14 +817,14 @@ def plot_lstc_corr_example():
         # cb.set_label('counts [log]')
         c = np.corrcoef(lais, lte)[0, 1]
         contrib = contribution[pair-1]
-        ax[p, 0].text(0.05, 0.56, f'Pair {pair}\n$contr={contrib:.2f}$ %\n$c={c:.4f}$', transform=ax[p, 0].transAxes)
+        ax[p, 0].text(0.05, 0.72, f'$contr={contrib:.2f}$ %\n$c={c:.4f}$', transform=ax[p, 0].transAxes)
 
         # Relayed spikes
         hist, xedges, yedges, h = ax[p, 1].hist2d(
             lais[relayed],
             lte[relayed],
             bins=n_bins,
-            cmap=clr.LinearSegmentedColormap.from_list("", ["w", "#4682b4", "k"], N=256),  # Blue
+            cmap='Greys',
             norm=mlp.colors.LogNorm())
         cb = plt.colorbar(h, ax=ax[p, 1])
 
@@ -832,7 +833,7 @@ def plot_lstc_corr_example():
             lais[nonrelayed],
             lte[nonrelayed],
             bins=n_bins,
-            cmap=clr.LinearSegmentedColormap.from_list("", ["w", "#cd5c5c", "k"], N=256),  # Red
+            cmap='Greys',
             norm=mlp.colors.LogNorm())
         cb = plt.colorbar(h, ax=ax[p, 2])
         cb.set_label('counts [log]')
@@ -841,11 +842,14 @@ def plot_lstc_corr_example():
         xlim = ax[p, 0].get_xlim()
         ylim = ax[p, 0].get_ylim()
         for a in ax[p, :]:
-            a.set(xlim=xlim, ylim=ylim, xlabel='LAIS', ylabel='LTE')
+            a.set(xlim=xlim, ylim=ylim, xlabel='$lAIS$', ylabel='$lTE$')
             a.axhline(0, c='k', ls='--', alpha=0.5)
             a.axvline(0, c='k', ls='--', alpha=0.5)
+        ax[p, 0].set(ylabel=f'Pair {pair}\n$lTE$')
         p += 1
 
+    for a, t in zip(ax[0, :], ['all spikes', 'relayed', 'non-relayed']):
+        a.set(title=t)
     plt.tight_layout()
     plt.savefig(figurepath.joinpath('examples_lstc_corr_hist_high_low.pdf'), dpi=400)
     plt.close('all')
