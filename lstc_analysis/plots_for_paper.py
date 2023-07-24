@@ -328,22 +328,19 @@ def plot_pid_all():
     plt.figure(figsize=(fig_params['fig_width'], fig_params['subplot_height']))
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.2, top=0.82)
     bar_linewidth = axes_linewidth
-    width = 0.35
-    space = 0.05
+    width = 0.25
+    space = 0.02
     x_min = 1 - 2 * width
     x_max = N + 4 * width
 
     rgc_unq_norm = unq_rgc_all / te_all
     syn_norm = syn_all / te_all
 
-    bars_te = plt.bar(np.arange(1, N + 1), te_all / te_all, width,
-                      color=col_lte_dark, linewidth=bar_linewidth)
     bars_unq_rgc_all = plt.bar(
-        np.arange(1, N + 1) + width + space,
+        np.arange(1, N + 1),
         rgc_unq_norm, width,
         color=col_unq_rgc_all_dark, linewidth=bar_linewidth)
     bars_syn = plt.bar(np.arange(1, N + 1) + width + space, syn_norm, width,
-                       bottom=rgc_unq_norm,
                        color=col_syn_dark, linewidth=bar_linewidth)
     plt.plot([x_min, x_max], [0.5, 0.5], '--', color=col_light_gray)
 
@@ -352,10 +349,9 @@ def plot_pid_all():
            xticklabels=all_pairs, xlim=[x_min, x_max], ylim=[0, 1.1])
     plt.ylabel('$I\\, [a.u.]$')
     plt.xlabel('cell pair')
-    plt.legend([bars_te, bars_unq_rgc_all, bars_syn],
-               ['$\\langle lTE \\rangle$',
-                '$I_{unq}(y_t;\\mathbf{x}^S)$',
-                '$I_{syn}(y_t;\\mathbf{x}^S, \\mathbf{y}^S)$'],
+    plt.legend([bars_unq_rgc_all, bars_syn],
+               ['$I_{unq}(Y_t;\\mathbf{X}^S)$',
+                '$I_{syn}(Y_t;\\mathbf{X}^S, \\mathbf{X}^S)$'],
                loc='upper center',
                bbox_to_anchor=(0.66, 1.30),
                fancybox=False, shadow=False, ncol=3,
