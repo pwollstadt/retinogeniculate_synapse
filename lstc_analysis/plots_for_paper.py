@@ -466,10 +466,10 @@ def plot_sta():
 
     # LAIS
     _plot_sta(sta_lais_relayed, sta_lais_all, sta_lais_nonrelayed,
-              col_light_gray, col_dark_gray, [0, 1, 2, 3], '$lAIS$ [bits]', True)
+              col_lais_light, col_lais_dark, [0, 1, 2, 3], '$lAIS$ [bits]', True)
     # LTE
     _plot_sta(sta_lte_relayed, sta_lte_all, sta_lte_nonrelayed,
-              col_light_gray, col_dark_gray, [4, 5, 6, 7], '$lTE$ [bits]', True)
+              col_lte_light, col_lte_dark, [4, 5, 6, 7], '$lTE$ [bits]', True)
     # RGC
     _plot_sta(sta_rgc_relayed, sta_rgc_all, sta_rgc_nonrelayed,
               col_light_gray, col_dark_gray, [8, 9, 10], 'RGC spikes')
@@ -526,7 +526,13 @@ def plot_isi():
         lte_by_isi_nonrelayed[i, isi_unique_nonrelayed] = isi[
             'lte_by_isi_nonrelayed'][isi_unique_nonrelayed]
 
-    fig = plt.figure(figsize=(fig_params['fig_width'], 6.0))
+    relayed_spikes = isi['relayed']
+    isi = isi['isi']
+    isi_relayed = isi[relayed_spikes]
+    print(isi)
+    print(isi_relayed)
+
+    fig = plt.figure(figsize=(fig_params['fig_width'], 5.0))
     isi_ind = np.arange(max_isi)
     plt.subplots_adjust(left=0.11, right=0.97, bottom=0.07, top=0.95, wspace=0.3, hspace=0.4)
 
@@ -534,10 +540,12 @@ def plot_isi():
     ax = plt.subplot(321)  # all
     ax.bar(np.arange(max_isi), isi_counts, color=col_light_gray, linewidth=0.5)
     ax.set(xlabel='$ISI$ [ms]', ylabel='abs. frequency')
+    print(f'ISI all RGC spikes: max. at {np.argmax(isi_counts)} ms')
     ax = plt.subplot(322)  # relayed
     ax.bar(np.arange(max_isi), isi_counts_relayed,
            color=col_dark_gray, linewidth=0.5)
     ax.set(xlabel='$ISI_{rel}$ [ms]', ylabel='abs. frequency')
+    print(f'ISI relayed RGC spikes: max. at {np.argmax(isi_counts_relayed)} ms')
 
     def _plot_line_area(ax, measures, col_dark, col_light, label, legend,
                         linestyle=None):
