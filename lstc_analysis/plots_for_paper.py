@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """Generate plots for paper, aggregate results over cell pairs.
 
-Aggregate all relevant measures over cell pairs. Create LATeX tables and
-figures. Measures include:
+Aggregate all relevant measures over cell pairs. Create figures.
+Measures include:
 
     - TE/AIS results
     - LAIS-LTE correlation coefficient
