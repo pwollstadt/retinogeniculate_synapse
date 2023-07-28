@@ -88,7 +88,7 @@ def results_split_data(pairs_to_split):
 
             # Save results
             with open(resultspath.joinpath(f'pair_{split:02d}_correlation.p'), 'wb') as f:
-                pickle.dump(corr_full, f)
+                pickle.dump(corr_split, f)
 
         i += 2
 

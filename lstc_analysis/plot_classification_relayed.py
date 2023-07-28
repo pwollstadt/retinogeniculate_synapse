@@ -23,86 +23,145 @@ all_pairs = list(np.arange(1, 18))
 all_pairs.remove(5)
 window_len = 31
 
-fig, ax = plt.subplots(nrows=1, figsize=(6, 2.5))
 
-p = 0
-for pair in all_pairs:
-    print(f'Training classifier for pair {pair}')
-    filename = resultspath.joinpath(f'pair_{pair:02d}_hist_data.npz')
-    try:
-        f = np.load(filename)
-    except FileNotFoundError:
-        print(f'No data for this pair: {filename}')
-        continue
-    lais = f['lais']
-    lte = f['lte']
-    rgc_spike_ind = f['rgc_spike_ind']
-    lgn_spike_ind = f['lgn_spike_ind']
-    relayed = np.logical_and(rgc_spike_ind, lgn_spike_ind)
-    nonrelayed = np.logical_and(rgc_spike_ind, np.invert(lgn_spike_ind))
+def run_classification():
+    fig, ax = plt.subplots(nrows=1, figsize=(6, 2.5))
 
-    X = np.hstack((lais[nonrelayed], lais[relayed]))
-    y = np.hstack((np.zeros(nonrelayed.sum()), np.ones(relayed.sum())))
+    col_lais = 'steelblue'  # 'darkblue'
+    col_isi = 'dimgray'  # 'darkgray'
+    col_rgc_spikes = 'lightgray'
 
-    # Add sum of previous spikes as predictor
-    rgc_spike_ind_rolling_sum = pd.Series(rgc_spike_ind).rolling(window_len).sum()
-    X_rgc = np.hstack((rgc_spike_ind_rolling_sum[nonrelayed], rgc_spike_ind_rolling_sum[relayed]))
-    X_rgc[np.isnan(X_rgc)] = 1
-    ind = np.where(rgc_spike_ind)[0]
-    X_isi = np.r_[[0], ind[1:] - ind[:-1]]
+    accuracy = {
+        'acc_lais_mean': [],
+        'acc_lais_sd': [],  # accuracy of predictions from lAIS
+        'acc_rgc_mean': [],
+        'acc_rgc_sd': [],  # accuracy of predictions from RGC spike counts up to 30 ms prior
+        'acc_isi_mean': [],
+        'acc_isi_sd': [],  # accuracy of predictions based on prior ISI
+        'acc_bl_mean': [],  # accuracy of baseline classifier (predict relay based on prior probability)
+    }
 
-    knn = KNeighborsClassifier()
-    baseline = DummyClassifier(strategy='stratified')
-    scaler = StandardScaler()
-    acc = []
-    acc_rgc = []
-    acc_isi = []
-    acc_bl = []
-    rkf = RepeatedKFold(n_splits=5, n_repeats=10, random_state=2652124)
-    for train_index, test_index in rkf.split(X):
-        X_train, X_test = X[train_index], X[test_index]
-        X_rgc_train, X_rgc_test = X_rgc[train_index], X_rgc[test_index]
-        X_isi_train, X_isi_test = X_isi[train_index], X_isi[test_index]
-        y_train, y_test = y[train_index], y[test_index]
+    p = 0
+    for pair in all_pairs:
+        print(f'Training classifier for pair {pair}')
+        filename = resultspath.joinpath(f'pair_{pair:02d}_hist_data.npz')
+        try:
+            f = np.load(filename)
+        except FileNotFoundError:
+            print(f'No data for this pair: {filename}')
+            continue
+        lais = f['lais']
+        lte = f['lte']
+        rgc_spike_ind = f['rgc_spike_ind']
+        lgn_spike_ind = f['lgn_spike_ind']
+        relayed = np.logical_and(rgc_spike_ind, lgn_spike_ind)
+        nonrelayed = np.logical_and(rgc_spike_ind, np.invert(lgn_spike_ind))
 
-        scaler.fit(X_train.reshape(-1, 1))
-        X_train = scaler.transform(X_train.reshape(-1, 1))
-        X_test = scaler.transform(X_test.reshape(-1, 1))
+        X = np.hstack((lais[nonrelayed], lais[relayed]))
+        y = np.hstack((np.zeros(nonrelayed.sum()), np.ones(relayed.sum())))
 
-        scaler.fit(X_rgc_train.reshape(-1, 1))
-        X_rgc_train = scaler.transform(X_rgc_train.reshape(-1, 1))
-        X_rgc_test = scaler.transform(X_rgc_test.reshape(-1, 1))
+        # Add sum of previous spikes as predictor
+        rgc_spike_ind_rolling_sum = pd.Series(rgc_spike_ind).rolling(window_len).sum()
+        X_rgc = np.hstack((rgc_spike_ind_rolling_sum[nonrelayed], rgc_spike_ind_rolling_sum[relayed]))
+        X_rgc[np.isnan(X_rgc)] = 1
+        ind = np.where(rgc_spike_ind)[0]
+        X_isi = np.r_[[0], ind[1:] - ind[:-1]]
 
-        scaler.fit(X_isi_train.reshape(-1, 1))
-        X_isi_train = scaler.transform(X_isi_train.reshape(-1, 1))
-        X_isi_test = scaler.transform(X_isi_test.reshape(-1, 1))
+        knn = KNeighborsClassifier()
+        baseline = DummyClassifier(strategy='stratified')
+        scaler = StandardScaler()
 
-        knn.fit(X_train, y_train)
-        acc.append(100*accuracy_score(y_test, knn.predict(X_test)))
+        acc_lais_splits = []
+        acc_rgc_splits = []
+        acc_isi_splits = []
+        acc_bl_splits = []
+        rkf = RepeatedKFold(n_splits=5, n_repeats=10, random_state=2652124)
+        for train_index, test_index in rkf.split(X):
+            X_train, X_test = X[train_index], X[test_index]
+            X_rgc_train, X_rgc_test = X_rgc[train_index], X_rgc[test_index]
+            X_isi_train, X_isi_test = X_isi[train_index], X_isi[test_index]
+            y_train, y_test = y[train_index], y[test_index]
 
-        knn.fit(X_rgc_train, y_train)
-        acc_rgc.append(100*accuracy_score(y_test, knn.predict(X_rgc_test)))
+            scaler.fit(X_train.reshape(-1, 1))
+            X_train = scaler.transform(X_train.reshape(-1, 1))
+            X_test = scaler.transform(X_test.reshape(-1, 1))
 
-        knn.fit(X_isi_train, y_train)
-        acc_isi.append(100*accuracy_score(y_test, knn.predict(X_isi_test)))
+            scaler.fit(X_rgc_train.reshape(-1, 1))
+            X_rgc_train = scaler.transform(X_rgc_train.reshape(-1, 1))
+            X_rgc_test = scaler.transform(X_rgc_test.reshape(-1, 1))
 
-        baseline.fit(X_train, y_train)
-        acc_bl.append(100*accuracy_score(y_test, baseline.predict(X_test)))
+            scaler.fit(X_isi_train.reshape(-1, 1))
+            X_isi_train = scaler.transform(X_isi_train.reshape(-1, 1))
+            X_isi_test = scaler.transform(X_isi_test.reshape(-1, 1))
 
-    print('ACC: {:.2f} (+/- {:.2f}) -- BL: {:.2f}, from RGC: {:.2f}, from ISI: {:.2f}'.format(
-        np.mean(acc), np.std(acc, ddof=1), np.mean(acc_bl), np.mean(acc_rgc), np.mean(acc_isi)))
+            knn.fit(X_train, y_train)
+            acc_lais_splits.append(100*accuracy_score(y_test, knn.predict(X_test)))
 
-    w = 0.2
-    ax.bar(p-w, np.mean(acc), width=w, color='#4682b4', yerr=np.std(acc, ddof=1))
-    ax.bar(p, np.mean(acc_rgc), width=w, color='#cd5c5c', yerr=np.std(acc_rgc, ddof=1))
-    ax.bar(p+w, np.mean(acc_isi), width=w, color='lightgray', yerr=np.std(acc_isi, ddof=1))
-    ax.plot([p-1.5*w, p+1.5*w], [np.mean(acc_bl), np.mean(acc_bl)], 'k:')
-    p += 1
+            knn.fit(X_rgc_train, y_train)
+            acc_rgc_splits.append(100*accuracy_score(y_test, knn.predict(X_rgc_test)))
 
-ax.set(xticks=np.arange(len(all_pairs)), xticklabels=all_pairs,
-       ylabel='Accuracy [%]', xlabel='Pair')
-plt.tight_layout()
-savename = figurepath.joinpath('classification_relayed_from_lais.pdf')
-print(f'Saving results figure to {savename}')
-plt.savefig(savename)
-plt.show()
+            knn.fit(X_isi_train, y_train)
+            acc_isi_splits.append(100*accuracy_score(y_test, knn.predict(X_isi_test)))
+
+            baseline.fit(X_train, y_train)
+            acc_bl_splits.append(100*accuracy_score(y_test, baseline.predict(X_test)))
+
+        print('ACC: {:.2f} (+/- {:.2f}) -- BL: {:.2f}, from RGC: {:.2f}, from ISI: {:.2f}'.format(
+            np.mean(acc_lais_splits), np.std(acc_lais_splits, ddof=1), np.mean(acc_bl_splits), np.mean(acc_rgc_splits), np.mean(acc_isi_splits)))
+
+        w = 0.2
+        ax.bar(p-w, np.mean(acc_lais_splits), width=w, color=col_lais, yerr=np.std(acc_lais_splits, ddof=1))  # Acc. lAIS
+        ax.bar(p, np.mean(acc_rgc_splits), width=w, color=col_rgc_spikes, yerr=np.std(acc_rgc_splits, ddof=1))  # Acc. RGC spikes
+        ax.bar(p+w, np.mean(acc_isi_splits), width=w, color=col_isi, yerr=np.std(acc_isi_splits, ddof=1))  #
+        ax.plot([p-1.5*w, p+1.5*w], [np.mean(acc_bl_splits), np.mean(acc_bl_splits)], 'k:')
+        p += 1
+
+        accuracy['acc_lais_mean'].append(np.mean(acc_lais_splits))
+        accuracy['acc_lais_sd'].append(np.std(acc_lais_splits, ddof=1))
+        accuracy['acc_rgc_mean'].append(np.mean(acc_rgc_splits))
+        accuracy['acc_rgc_sd'].append(np.std(acc_rgc_splits, ddof=1))
+        accuracy['acc_isi_mean'].append(np.mean(acc_isi_splits))
+        accuracy['acc_isi_sd'].append(np.std(acc_isi_splits, ddof=1))
+        accuracy['acc_bl_mean'].append(np.mean(acc_bl_splits))
+
+    ax.set(xticks=np.arange(len(all_pairs)), xticklabels=all_pairs,
+           ylabel='Accuracy [%]', xlabel='Pair')
+    plt.tight_layout()
+    savename = figurepath.joinpath('classification_relayed_from_lais.pdf')
+    print(f'Saving results figure to {savename}')
+    plt.savefig(savename)
+    plt.show()
+
+    df_acc = pd.DataFrame(accuracy)
+    df_acc['cell_pair'] = all_pairs
+    df_acc.set_index('cell_pair', inplace=True)
+    print(df_acc)
+    df_acc.to_csv(resultspath.joinpath('classification_relayed_from_lais.csv'))
+    print('Comparison of lAIS prediction performance against other classifications')
+    print(pd.DataFrame(
+        {
+            'against BL': df_acc['acc_lais_mean'] > df_acc['acc_bl_mean'],
+            'against RGC': df_acc['acc_lais_mean'] >= df_acc['acc_rgc_mean'],
+            'against ISI': df_acc['acc_lais_mean'] > df_acc['acc_isi_mean'],
+        }
+    ))
+    print('Comparison of RGC prediction performance against other classifications')
+    print(pd.DataFrame(
+        {
+            'against BL': df_acc['acc_rgc_mean'] > df_acc['acc_bl_mean'],
+            'against lAIS': df_acc['acc_rgc_mean'] >= df_acc['acc_lais_mean'],
+            'against ISI': df_acc['acc_rgc_mean'] > df_acc['acc_isi_mean'],
+        }
+    ))
+    print('Comparison of ISI prediction performance against other classifications')
+    print(pd.DataFrame(
+        {
+            'against BL': df_acc['acc_isi_mean'] > df_acc['acc_bl_mean'],
+            'against lAIS': df_acc['acc_isi_mean'] >= df_acc['acc_lais_mean'],
+            'against RGC': df_acc['acc_isi_mean'] > df_acc['acc_rgc_mean'],
+        }
+    ))
+
+
+if __name__ == '__main__':
+    run_classification()
