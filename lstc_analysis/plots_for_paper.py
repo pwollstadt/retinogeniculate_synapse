@@ -26,7 +26,6 @@ import numpy as np
 import scipy.stats as sc
 import matplotlib as mlp
 import matplotlib.pyplot as plt
-import matplotlib.colors as clr
 
 from utils import load_mte_ais_estimates, get_paths, load_local_estimates
 
